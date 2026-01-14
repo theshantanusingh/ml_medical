@@ -3,6 +3,7 @@ import joblib
 import pandas as pd
 import numpy as np
 import time
+import difflib
 
 # Page configuration
 st.set_page_config(
@@ -133,29 +134,40 @@ def analyze_symptoms(text):
 
     scores = {}
     
-    # 2. Score diseases
+    # Get all unique keywords from DB for fast lookup
+    all_keywords = []
+    kw_to_disease = {}
+    for d, data in SYMPTOM_DB.items():
+        for k in data['keywords']:
+            all_keywords.append(k)
+            if k not in kw_to_disease: kw_to_disease[k] = []
+            kw_to_disease[k].append(d)
+
+    # 2. Advanced Scoring with Fuzzy Match
+    user_words = text.split()
+    
+    # Check exact phrases first (e.g. "chest pain")
     for disease, data in SYMPTOM_DB.items():
-        score = 0
-        matched_keywords = []
         for kw in data['keywords']:
-            # Check for multi-word phrases or single words
             if kw in text:
-                score += 1
-                matched_keywords.append(kw)
-        
-        # Bonus for multiple different keyword matches
-        if score > 0:
-            scores[disease] = score
-            
+                scores[disease] = scores.get(disease, 0) + 3 # High weight for phrase match
+
+    # Check fuzzy single words
+    for word in user_words:
+        # Find close matches in our keyword database
+        matches = difflib.get_close_matches(word, all_keywords, n=1, cutoff=0.8) # 80% similarity
+        if matches:
+            matched_kw = matches[0]
+            # Attribute this match to relevant diseases
+            relevant_diseases = kw_to_disease[matched_kw]
+            for d in relevant_diseases:
+                scores[d] = scores.get(d, 0) + 1
+
     if not scores:
         return None, "I'm listening, but I didn't catch specific symptoms I recognize safely. Could you describe where it hurts or how you feel in more detail? (e.g., 'I feel dizzy', 'I have a fever')"
     
     # 3. Get best match
     best_match = max(scores, key=scores.get)
-    best_score = scores[best_match]
-    
-    # 4. Confidence Threshold (Optional logic can be added here)
-    
     return best_match, SYMPTOM_DB[best_match]['msg']
 
 # -----------------------------------------------------------------------------
@@ -230,6 +242,11 @@ def get_feature_info(name):
         "help": f"Enter value for {clean_name}."
     }
 
+def switch_view(disease_name):
+    """Callback to switch view safely before re-render"""
+    st.session_state.selected_disease_name = disease_name
+    st.session_state.nav_mode = "📝 Clinical Assessment"
+
 # -----------------------------------------------------------------------------
 # APP LOAD
 # -----------------------------------------------------------------------------
@@ -262,7 +279,11 @@ with st.sidebar:
     st.markdown("---")
     
     # Navigation
-    app_mode = st.radio("Navigation", ["💬 AI Symptom Chat", "📝 Clinical Assessment"])
+    # Navigation
+    if 'nav_mode' not in st.session_state:
+        st.session_state.nav_mode = "💬 AI Symptom Chat"
+    
+    app_mode = st.radio("Navigation", ["💬 AI Symptom Chat", "📝 Clinical Assessment"], key="nav_mode")
     
     st.markdown("---")
     
@@ -309,9 +330,19 @@ if app_mode == "💬 AI Symptom Chat":
     if "messages" not in st.session_state:
         st.session_state.messages = [{"role": "assistant", "content": "Hello! I am your medical assistant. How are you feeling today? Tell me about any symptoms you are experiencing."}]
 
-    for msg in st.session_state.messages:
+    for i, msg in enumerate(st.session_state.messages):
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
+            # Render button if this message has a disease link attached
+            if "disease_link" in msg:
+                display_name = msg["disease_link"].replace('_', ' ').title()
+                # Unique key is crucial for buttons in loops
+                st.button(
+                    f"Start {display_name} Assessment →", 
+                    key=f"btn_{i}",
+                    on_click=switch_view,
+                    args=(display_name,)
+                )
 
     # Chat Input
     if prompt := st.chat_input("Ex: I have chest pain and feel dizzy..."):
@@ -330,17 +361,21 @@ if app_mode == "💬 AI Symptom Chat":
         # Assistant Response
         with st.chat_message("assistant"):
             st.markdown(response_text)
-            st.session_state.messages.append({"role": "assistant", "content": response_text})
             
+            # Save message with metadata
+            msg_data = {"role": "assistant", "content": response_text}
             if disease_match:
-                # Button to redirect
+                msg_data["disease_link"] = disease_match
+                # Also render button immediately for this run
                 display_name = disease_match.replace('_', ' ').title()
-                if st.button(f"Start {display_name} Assessment →"):
-                    st.session_state.selected_disease_name = display_name
-                    # Force a rerun to switch tabs? 
-                    # Streamlit doesn't strictly allow switching tabs programmatically easily without session state tricks
-                    # We will ask user to switch manually or just highlight it
-                    st.info(f"Please switch to the 'Clinical Assessment' tab in the sidebar and select **{display_name}** to begin your diagnosis.")
+                st.button(
+                    f"Start {display_name} Assessment →", 
+                    key=f"btn_new_{len(st.session_state.messages)}",
+                    on_click=switch_view,
+                    args=(display_name,)
+                )
+            
+            st.session_state.messages.append(msg_data)
 
 elif app_mode == "📝 Clinical Assessment":
     st.title(f"{st.session_state.selected_disease_name} Assessment")
