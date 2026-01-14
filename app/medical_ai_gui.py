@@ -18,128 +18,144 @@ st.set_page_config(
 
 SYMPTOM_DB = {
     "heart": {
-        "keywords": ["chest pain", "angina", "breath", "dizzy", "fatigue", "palpitations", "pressure"],
-        "msg": "Based on these symptoms, we should check for **Heart Disease** risk factors."
+        "keywords": ["chest pain", "tight chest", "heart hurts", "angina", "short of breath", "dizzy", "fainting", "fatigue", "palpitations", "racing heart", "pressure in chest", "squeezing"],
+        "msg": "I understand. Chest pain and shortness of breath can be concerning. Based on these symptoms, I recommend checking for **Heart Disease** risk factors immediately."
     },
     "diabetes": {
-        "keywords": ["thirsty", "urination", "toilet", "hungry", "weight loss", "blur", "vision", "tired", "wound"],
-        "msg": "Frequent urination, thirst, and hunger are classic signs of **Diabetes**."
+        "keywords": ["thirsty", "drinking water", "urination", "toilet often", "hungry", "weight loss", "blurry vision", "tired", "slow healing", "wounds"],
+        "msg": "Excessive thirst, frequent urination, and unexplained weight loss are classic indicators of **Diabetes**. It would be wise to screen for this."
     },
     "hepatitis": {
-        "keywords": ["yellow", "skin", "eyes", "jaundice", "stomach pain", "vomit", "nausea", "urine dark"],
-        "msg": "Yellowish skin/eyes and abdominal pain often indicate **Hepatitis** or liver issues."
+        "keywords": ["yellow skin", "yellow eyes", "jaundice", "stomach pain", "abdominal pain", "vomiting", "nausea", "dark urine", "pale stool"],
+        "msg": "The yellowing of skin or eyes (jaundice) combined with abdominal pain strongly suggests issues with the liver, such as **Hepatitis**."
     },
     "breast_cancer": {
-        "keywords": ["lump", "breast", "mass", "swelling", "discharge", "nipple", "pain"],
-        "msg": "Please be cautious of any lumps or changes. We should screen for **Breast Cancer**."
+        "keywords": ["lump breast", "lump chest", "breast pain", "nipple discharge", "swelling underarm", "change in breast shape"],
+        "msg": "Any new lumps, pain, or changes in breast tissue should be taken seriously. Please proceed with the **Breast Cancer** risk assessment."
     },
     "parkinsons": {
-        "keywords": ["shake", "tremor", "hands", "stiff", "slow", "movement", "balance", "speech"],
-        "msg": "Tremors and stiffness can be associated with **Parkinson's Disease**."
+        "keywords": ["shaking hands", "tremor", "stiff muscles", "slow movement", "balance problems", "slurred speech", "hand writing small"],
+        "msg": "Tremors, stiffness, and slow movement are characteristic signs of **Parkinson's Disease**. Let's assess your risk factors."
     },
     "malaria": {
-        "keywords": ["fever", "shiver", "chills", "sweat", "headache", "vomit", "muscle pain"],
-        "msg": "High fever with chills and shivering suggests **Malaria** screening is needed."
+        "keywords": ["high fever", "shivering", "chills", "sweating", "headache", "nausea", "vomiting", "muscle pain", "body ache"],
+        "msg": "High fever accompanied by severe chills and shivering is typical of **Malaria**, especially if you've been in high-risk areas."
     },
     "flu": {
-        "keywords": ["runny nose", "sneeze", "cold", "fever", "cough", "sore throat", "ache"],
-        "msg": "These are common symptoms of **Influenza (Flu)**."
+        "keywords": ["runny nose", "sneezing", "stuffy nose", "sore throat", "fever", "cough", "body aches", "feeling cold"],
+        "msg": "These symptoms (fever, aches, congestion) closely match **Influenza (Flu)**. Rest is usually recommended, but let's check your vitals."
     },
     "pneumonia": {
-        "keywords": ["phlegm", "cough", "chest pain", "breath", "fever", "chills"],
-        "msg": "Productive cough and chest pain may indicate **Pneumonia**."
+        "keywords": ["cough with phlegm", "mucus", "green phlegm", "chest pain when breathing", "shortness of breath", "fever", "sweating", "chills"],
+        "msg": "A productive cough with chest pain and fever could indicate **Pneumonia**, which requires medical attention."
     },
     "tuberculosis": {
-        "keywords": ["cough long", "blood", "sweat night", "weight loss", "chest pain"],
-        "msg": "Persistent cough with night sweats warrants a **Tuberculosis (TB)** check."
+        "keywords": ["coughing blood", "long cough", "cough 3 weeks", "night sweats", "weight loss", "chest pain", "weakness"],
+        "msg": "A persistent cough (lasting weeks), especially with night sweats or blood, warrants a specific check for **Tuberculosis (TB)**."
     },
     "arthritis": {
-        "keywords": ["joint", "pain", "stiff", "swell", "knee", "finger"],
-        "msg": "Joint pain and stiffness are characteristic of **Arthritis**."
+        "keywords": ["joint pain", "stiff joints", "swollen joints", "knee pain", "finger pain", "hard to move", "red joints"],
+        "msg": "Pain, stiffness, and swelling in the joints are key symptoms of **Arthritis**."
     },
     "asthma": {
-        "keywords": ["wheeze", "breath", "chest tight", "cough night", "allergy"],
-        "msg": "Wheezing and breathlessness are key signs of **Asthma**."
+        "keywords": ["wheezing", "whistling breath", "chest tight", "breathless", "coughing at night", "allergies", "dust allergy"],
+        "msg": "Wheezing and chest tightness, particularly at night or with exertion, are signs of **Asthma**."
     },
     "migraine": {
-        "keywords": ["headache", "one side", "light", "sound", "nausea", "throb"],
-        "msg": "Severe throbbing headaches with sensitivity to light suggest a **Migraine**."
+        "keywords": ["severe headache", "throbbing head", "pain on one side", "light sensitivity", "sound sensitivity", "nausea", "visual aura"],
+        "msg": "A severe, throbbing headache with sensitivity to light or sound suggests a **Migraine** rather than a typical tension headache."
     },
     "alzheimers": {
-        "keywords": ["forget", "memory", "confused", "lost", "name", "repeat"],
-        "msg": "Memory loss and confusion can be early signs of **Alzheimer's**."
+        "keywords": ["forgetting names", "memory loss", "confusion", "getting lost", "asking same questions", "personality change"],
+        "msg": "Significant memory loss, confusion about time or place, and repetitive questioning can be early signs of **Alzheimer's**."
     },
     "anemia": {
-        "keywords": ["pale", "tired", "weak", "dizzy", "cold hands"],
-        "msg": "Pallor and extreme fatigue often point to **Anemia**."
+        "keywords": ["pale skin", "feeling weak", "constant tiredness", "dizzy", "lightheaded", "cold hands", "cold feet", "short breath"],
+        "msg": "Looking pale, feeling constantly tired, and having cold extremities often points to **Anemia** (low iron/hemoglobin)."
     },
     "depression": {
-        "keywords": ["sad", "hopeless", "cry", "sleep", "eat", "suicide", "interest"],
-        "msg": "Persistent sadness and loss of interest are signs of **Depression**. Please seek help."
+        "keywords": ["feeling sad", "hopeless", "crying", "lost interest", "sleeping too much", "insomnia", "suicidal", "guilt"],
+        "msg": "Persistent sadness, loss of interest, and changes in sleep are symptoms of **Depression**. It's important to take this seriously."
     },
     "anxiety": {
-        "keywords": ["worry", "nervous", "panic", "sweat", "heart fast", "fear"],
-        "msg": "Excessive worry and panic attacks identify **Anxiety**."
+        "keywords": ["worrying", "nervous", "panic attack", "racing heart", "sweating", "trembling", "impending doom"],
+        "msg": "Excessive, uncontrollable worry and physical signs like a racing heart are characteristic of **Anxiety** disorders."
     },
     "uti": {
-        "keywords": ["burn", "urine", "pee", "pain", "bladder", "smell"],
-        "msg": "Burning sensation during urination usually indicates a **UTI**."
+        "keywords": ["burning pee", "painful urination", "urinate often", "cloudy urine", "strong smelling urine", "pelvic pain"],
+        "msg": "A burning sensation during urination and frequent urges to go usually indicate a **Urinary Tract Infection (UTI)**."
     },
     "gerd": {
-        "keywords": ["heartburn", "acid", "reflux", "chest burn", "swallow"],
-        "msg": "Heartburn and acid reflux are signs of **GERD**."
+        "keywords": ["heartburn", "acid reflux", "chest burning", "sour taste", "burping", "trouble swallowing", "lump in throat"],
+        "msg": "Frequent heartburn and a sour taste/acid coming up are classic signs of **GERD** (Acid Reflux)."
     },
     "copd": {
-        "keywords": ["smoke", "cough", "mucus", "breath", "wheeze"],
-        "msg": "Chronic cough and breathing issues in smokers often relate to **COPD**."
+        "keywords": ["smokers cough", "chronic cough", "lot of mucus", "wheezing", "tight chest", "blue lips"],
+        "msg": "Chronic coughing and breathing difficulties, especially with a history of smoking, are linked to **COPD**."
     },
     "psoriasis": {
-        "keywords": ["itch", "red patch", "scale", "skin", "silver"],
-        "msg": "Red patches with silver scales are specific to **Psoriasis**."
+        "keywords": ["red patches skin", "silvery scales", "thick skin", "itching skin", "cracked skin", "joint pain"],
+        "msg": "Thick red patches of skin covered with silvery scales are distinctive of **Psoriasis**."
     },
     "osteoporosis": {
-        "keywords": ["bone", "fracture", "break", "back pain", "height"],
-        "msg": "Frequent fractures or bone pain may indicate **Osteoporosis**."
+        "keywords": ["bone fracture", "broken bone", "back pain", "getting shorter", "stooped posture"],
+        "msg": "Frequent fractures from minor falls or loss of height may indicate **Osteoporosis** (brittle bones)."
     },
     "gout": {
-        "keywords": ["toe", "big toe", "joint red", "swollen", "pain sharp"],
-        "msg": "Sudden, severe pain in the big toe often indicates **Gout**."
+        "keywords": ["pain in big toe", "swollen toe", "red toe", "hot joint", "sudden intense pain"],
+        "msg": "Sudden, severe pain, redness, and swelling in the big toe is the most common presentation of **Gout**."
     },
     "eczema": {
-        "keywords": ["itch", "dry", "red", "rash", "skin"],
-        "msg": "Itchy, red, dry skin is typical of **Eczema**."
+        "keywords": ["itchy skin", "dry skin", "red rash", "scaly skin", "skin infection"],
+        "msg": "Intensely itchy, red, and dry skin patches are typical of **Eczema**."
     },
      "sleep_apnea": {
-        "keywords": ["snore", "sleep", "tired", "wake", "gasp"],
-        "msg": "Loud snoring and daytime tiredness are signs of **Sleep Apnea**."
+        "keywords": ["loud snoring", "choking in sleep", "gasping sleep", "tired during day", "morning headache"],
+        "msg": "Loud snoring followed by gasping or pauses in breathing suggests **Sleep Apnea**."
     },
       "kidney": {
-        "keywords": ["swell", "feet", "urine", "tired", "nausea"],
-        "msg": "Swelling in feet and changes in urination can signal **Kidney Disease**."
+        "keywords": ["swollen feet", "swollen ankles", "puffy eyes", "tired", "foamy urine", "dry itchy skin"],
+        "msg": "Swelling in the ankles/feet, fatigue, and changes in urination can signal **Kidney Disease**."
     },
       "liver": {
-        "keywords": ["jaundice", "yellow", "pain", "swollen abdomen"],
-        "msg": "Abdominal issues and jaundice are linked to **Liver Disease**."
+        "keywords": ["yellow skin", "swollen abdomen", "easy bruising", "itchy skin", "dark urine"],
+        "msg": "Abdominal swelling, yellow skin, and easy bruising are advanced warnings for **Liver Disease**."
     }
 }
 
 def analyze_symptoms(text):
     text = text.lower()
+    
+    # 1. Pre-checks for Greetings/General
+    greetings = ["hi", "hello", "hey", "start", "help"]
+    if any(w in text.split() for w in greetings):
+        return None, "Hello! I'm here to help. Please tell me about your physical symptoms (e.g., 'I have a headache', 'My chest hurts')."
+
     scores = {}
     
+    # 2. Score diseases
     for disease, data in SYMPTOM_DB.items():
         score = 0
+        matched_keywords = []
         for kw in data['keywords']:
+            # Check for multi-word phrases or single words
             if kw in text:
                 score += 1
+                matched_keywords.append(kw)
+        
+        # Bonus for multiple different keyword matches
         if score > 0:
             scores[disease] = score
             
     if not scores:
-        return None, "I couldn't detect specific disease patterns in your symptoms. Could you describe them differently?"
+        return None, "I'm listening, but I didn't catch specific symptoms I recognize safely. Could you describe where it hurts or how you feel in more detail? (e.g., 'I feel dizzy', 'I have a fever')"
     
-    # Return best match
+    # 3. Get best match
     best_match = max(scores, key=scores.get)
+    best_score = scores[best_match]
+    
+    # 4. Confidence Threshold (Optional logic can be added here)
+    
     return best_match, SYMPTOM_DB[best_match]['msg']
 
 # -----------------------------------------------------------------------------
