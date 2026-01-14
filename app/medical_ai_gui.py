@@ -18,7 +18,7 @@ st.set_page_config(
 
 SYMPTOM_DB = {
     "heart": {
-        "keywords": ["chest pain", "angina", "breath", "dizzy", "fatigue", "palpitations", "heart beat", "pressure", "squeezing"],
+        "keywords": ["chest pain", "angina", "breath", "dizzy", "fatigue", "palpitations", "pressure"],
         "msg": "Based on these symptoms, we should check for **Heart Disease** risk factors."
     },
     "diabetes": {
@@ -26,16 +26,100 @@ SYMPTOM_DB = {
         "msg": "Frequent urination, thirst, and hunger are classic signs of **Diabetes**."
     },
     "hepatitis": {
-        "keywords": ["yellow", "skin", "eyes", "jaundice", "stomach pain", "vomit", "nausea", "abdomen", "urine dark"],
+        "keywords": ["yellow", "skin", "eyes", "jaundice", "stomach pain", "vomit", "nausea", "urine dark"],
         "msg": "Yellowish skin/eyes and abdominal pain often indicate **Hepatitis** or liver issues."
     },
     "breast_cancer": {
         "keywords": ["lump", "breast", "mass", "swelling", "discharge", "nipple", "pain"],
-        "msg": "Please be cautious with any new lumps or changes. We should screen for **Breast Cancer** markers."
+        "msg": "Please be cautious of any lumps or changes. We should screen for **Breast Cancer**."
     },
     "parkinsons": {
         "keywords": ["shake", "tremor", "hands", "stiff", "slow", "movement", "balance", "speech"],
         "msg": "Tremors and stiffness can be associated with **Parkinson's Disease**."
+    },
+    "malaria": {
+        "keywords": ["fever", "shiver", "chills", "sweat", "headache", "vomit", "muscle pain"],
+        "msg": "High fever with chills and shivering suggests **Malaria** screening is needed."
+    },
+    "flu": {
+        "keywords": ["runny nose", "sneeze", "cold", "fever", "cough", "sore throat", "ache"],
+        "msg": "These are common symptoms of **Influenza (Flu)**."
+    },
+    "pneumonia": {
+        "keywords": ["phlegm", "cough", "chest pain", "breath", "fever", "chills"],
+        "msg": "Productive cough and chest pain may indicate **Pneumonia**."
+    },
+    "tuberculosis": {
+        "keywords": ["cough long", "blood", "sweat night", "weight loss", "chest pain"],
+        "msg": "Persistent cough with night sweats warrants a **Tuberculosis (TB)** check."
+    },
+    "arthritis": {
+        "keywords": ["joint", "pain", "stiff", "swell", "knee", "finger"],
+        "msg": "Joint pain and stiffness are characteristic of **Arthritis**."
+    },
+    "asthma": {
+        "keywords": ["wheeze", "breath", "chest tight", "cough night", "allergy"],
+        "msg": "Wheezing and breathlessness are key signs of **Asthma**."
+    },
+    "migraine": {
+        "keywords": ["headache", "one side", "light", "sound", "nausea", "throb"],
+        "msg": "Severe throbbing headaches with sensitivity to light suggest a **Migraine**."
+    },
+    "alzheimers": {
+        "keywords": ["forget", "memory", "confused", "lost", "name", "repeat"],
+        "msg": "Memory loss and confusion can be early signs of **Alzheimer's**."
+    },
+    "anemia": {
+        "keywords": ["pale", "tired", "weak", "dizzy", "cold hands"],
+        "msg": "Pallor and extreme fatigue often point to **Anemia**."
+    },
+    "depression": {
+        "keywords": ["sad", "hopeless", "cry", "sleep", "eat", "suicide", "interest"],
+        "msg": "Persistent sadness and loss of interest are signs of **Depression**. Please seek help."
+    },
+    "anxiety": {
+        "keywords": ["worry", "nervous", "panic", "sweat", "heart fast", "fear"],
+        "msg": "Excessive worry and panic attacks identify **Anxiety**."
+    },
+    "uti": {
+        "keywords": ["burn", "urine", "pee", "pain", "bladder", "smell"],
+        "msg": "Burning sensation during urination usually indicates a **UTI**."
+    },
+    "gerd": {
+        "keywords": ["heartburn", "acid", "reflux", "chest burn", "swallow"],
+        "msg": "Heartburn and acid reflux are signs of **GERD**."
+    },
+    "copd": {
+        "keywords": ["smoke", "cough", "mucus", "breath", "wheeze"],
+        "msg": "Chronic cough and breathing issues in smokers often relate to **COPD**."
+    },
+    "psoriasis": {
+        "keywords": ["itch", "red patch", "scale", "skin", "silver"],
+        "msg": "Red patches with silver scales are specific to **Psoriasis**."
+    },
+    "osteoporosis": {
+        "keywords": ["bone", "fracture", "break", "back pain", "height"],
+        "msg": "Frequent fractures or bone pain may indicate **Osteoporosis**."
+    },
+    "gout": {
+        "keywords": ["toe", "big toe", "joint red", "swollen", "pain sharp"],
+        "msg": "Sudden, severe pain in the big toe often indicates **Gout**."
+    },
+    "eczema": {
+        "keywords": ["itch", "dry", "red", "rash", "skin"],
+        "msg": "Itchy, red, dry skin is typical of **Eczema**."
+    },
+     "sleep_apnea": {
+        "keywords": ["snore", "sleep", "tired", "wake", "gasp"],
+        "msg": "Loud snoring and daytime tiredness are signs of **Sleep Apnea**."
+    },
+      "kidney": {
+        "keywords": ["swell", "feet", "urine", "tired", "nausea"],
+        "msg": "Swelling in feet and changes in urination can signal **Kidney Disease**."
+    },
+      "liver": {
+        "keywords": ["jaundice", "yellow", "pain", "swollen abdomen"],
+        "msg": "Abdominal issues and jaundice are linked to **Liver Disease**."
     }
 }
 
@@ -52,7 +136,7 @@ def analyze_symptoms(text):
             scores[disease] = score
             
     if not scores:
-        return None, "I couldn't detect specific disease patterns in your symptoms. Could you describe them differently? (e.g., 'I have chest pain', 'I feel very thirsty')"
+        return None, "I couldn't detect specific disease patterns in your symptoms. Could you describe them differently?"
     
     # Return best match
     best_match = max(scores, key=scores.get)
@@ -63,6 +147,13 @@ def analyze_symptoms(text):
 # -----------------------------------------------------------------------------
 
 FEATURE_CONFIG = {
+    # --- COMMON ---
+    "Fever": {"label": "Body Temperature", "type": "basic", "help": "Body temperature in Fahrenheit."},
+    "Cough": {"label": "Cough Severity", "type": "basic", "help": "Scale 0-10"},
+    "Fatigue": {"label": "Fatigue Level", "type": "basic", "help": "Scale 0-10"},
+    "Age": {"label": "Age", "type": "basic", "help": "Patient Age"},
+    "BMI": {"label": "BMI", "type": "basic", "help": "Body Mass Index"},
+    
     # --- HEART ---
     "age": {"label": "Age", "type": "basic", "help": "Age of the patient in years."},
     "sex": {"label": "Sex", "type": "basic", "help": "1 = Male, 0 = Female"},
@@ -70,8 +161,6 @@ FEATURE_CONFIG = {
     "trestbps": {"label": "Resting Blood Pressure", "type": "basic", "help": "Resting blood pressure (mm Hg). Normal is < 120/80."},
     "chol": {"label": "Serum Cholesterol", "type": "basic", "help": "Serum cholesterol in mg/dl."},
     "fbs": {"label": "Fasting Blood Sugar > 120", "type": "basic", "help": "1 = True (>120 mg/dl), 0 = False"},
-    
-    # Heart - Advanced
     "restecg": {"label": "Resting ECG", "type": "advanced", "help": "ECG results."},
     "thalach": {"label": "Max Heart Rate", "type": "advanced", "help": "Maximum heart rate achieved."},
     "exang": {"label": "Exercise Induced Angina", "type": "advanced", "help": "1 = Yes, 0 = No"},
@@ -84,13 +173,10 @@ FEATURE_CONFIG = {
     "Pregnancies": {"label": "Pregnancies", "type": "basic", "help": "Number of times pregnant."},
     "Glucose": {"label": "Glucose Level", "type": "basic", "help": "Plasma glucose concentration."},
     "BloodPressure": {"label": "Blood Pressure", "type": "basic", "help": "Diastolic blood pressure (mm Hg)."},
-    "BMI": {"label": "BMI", "type": "basic", "help": "Body mass index."},
-    "Age": {"label": "Age", "type": "basic", "help": "Age of the patient."},
-    
-    # Diabetes - Advanced
     "SkinThickness": {"label": "Skin Thickness", "type": "advanced", "help": "Triceps skin fold thickness (mm)."},
     "Insulin": {"label": "Insulin Level", "type": "advanced", "help": "2-Hour serum insulin."},
     "DiabetesPedigreeFunction": {"label": "Pedigree Function", "type": "advanced", "help": "Diabetes pedigree function."},
+
 
     # --- HEPATITIS ---
     "Age": {"label": "Age", "type": "basic", "help": "Patient Age"},

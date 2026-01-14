@@ -150,16 +150,18 @@ class MultiDiseasePredictor:
         """Train with full safety checks"""
         self.load_existing()
 
-        diseases = {
-            "heart": ("data/raw/heart.csv", "target", [
+        # 1. Defined Configs for Legacy/Real Datasets
+        # Maps filename -> (Target Column, Column Headers if missing)
+        special_configs = {
+            "heart.csv": ("target", [
                 'age', 'sex', 'cp', 'trestbps', 'chol', 'fbs', 'restecg', 'thalach', 
                 'exang', 'oldpeak', 'slope', 'ca', 'thal', 'target'
             ]),
-            "diabetes": ("data/raw/diabetes.csv", "Outcome", [
+            "diabetes.csv": ("Outcome", [
                 'Pregnancies', 'Glucose', 'BloodPressure', 'SkinThickness', 'Insulin', 
                 'BMI', 'DiabetesPedigreeFunction', 'Age', 'Outcome'
             ]),
-            "breast_cancer": ("data/raw/breast_cancer.csv", "diagnosis", [
+            "breast_cancer.csv": ("diagnosis", [
                 'id', 'diagnosis', 'radius_mean', 'texture_mean', 'perimeter_mean', 'area_mean', 
                 'smoothness_mean', 'compactness_mean', 'concavity_mean', 'concave_points_mean', 
                 'symmetry_mean', 'fractal_dimension_mean', 'radius_se', 'texture_se', 'perimeter_se', 
@@ -168,21 +170,37 @@ class MultiDiseasePredictor:
                 'perimeter_worst', 'area_worst', 'smoothness_worst', 'compactness_worst', 
                 'concavity_worst', 'concave_points_worst', 'symmetry_worst', 'fractal_dimension_worst'
             ]),
-            "hepatitis": ("data/raw/hepatitis.csv", "Class", [
+            "hepatitis.csv": ("Class", [
                 'Class', 'Age', 'Sex', 'Steroid', 'Antivirals', 'Fatigue', 'Malaise', 'Anorexia', 
                 'Liver Big', 'Liver Firm', 'Spleen Palpable', 'Spiders', 'Ascites', 'Varices', 
                 'Bilirubin', 'Alk Phosphate', 'Sgot', 'Albumin', 'Protime', 'Histology'
             ]),
-            "parkinsons": ("data/raw/parkinsons.csv", "status", None), # Has headers
-            "liver": ("data/raw/liver.csv", "Dataset", None),
-            "kidney": ("data/raw/kidney.csv", "Class", None),
-            "stroke": ("data/raw/stroke.csv", "stroke", None),
-            "thyroid": ("data/raw/thyroid.csv", "Class", None),
-            "dengue": ("data/raw/dengue.csv", "case", None),
+             "parkinsons.csv": ("status", None),
+             "liver.csv": ("Dataset", None),
+             "kidney.csv": ("Class", None),
+             "stroke.csv": ("stroke", None),
+             "thyroid.csv": ("Class", None),
+             "dengue.csv": ("case", None)
         }
 
-        for disease, (path, target, cols) in diseases.items():
-            self.add_disease(path, target, disease, columns=cols)
+        # 2. Dynamic Discovery
+        data_dir = "data/raw"
+        if os.path.exists(data_dir):
+            files = [f for f in os.listdir(data_dir) if f.endswith('.csv')]
+            
+            for filename in files:
+                disease_name = filename.replace('.csv', '')
+                path = os.path.join(data_dir, filename)
+                
+                # Determine Config
+                if filename in special_configs:
+                    target, cols = special_configs[filename]
+                else:
+                    # Default for new synthetic data: Last column is target, headers flow from CSV
+                    target = "target" 
+                    cols = None
+                
+                self.add_disease(path, target, disease_name, columns=cols)
 
         self.save_pipeline()
 
