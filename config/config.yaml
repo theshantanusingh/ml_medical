@@ -1,0 +1,18 @@
+diseases:
+  heart:
+    dataset: "heart.csv"
+    target: "target"
+  diabetes:
+    dataset: "diabetes.csv"
+    target: "Outcome"
+  breast_cancer:
+    dataset: "breast_cancer.csv"
+    target: "diagnosis"
+  parkinsons:
+    dataset: "parkinsons.csv"
+    target: "status"
+
+pipeline:
+  test_size: 0.2
+  random_state: 42
+  cv_folds: 5
