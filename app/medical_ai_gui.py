@@ -2,83 +2,134 @@ import streamlit as st
 import joblib
 import pandas as pd
 import numpy as np
+import time
 
 # Page configuration
 st.set_page_config(
     page_title="Medical Diagnostic System",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
+    page_icon="🏥"
 )
+
+# -----------------------------------------------------------------------------
+# KNOWLEDGE BASE (SYMPTOM MATCHING)
+# -----------------------------------------------------------------------------
+
+SYMPTOM_DB = {
+    "heart": {
+        "keywords": ["chest pain", "angina", "breath", "dizzy", "fatigue", "palpitations", "heart beat", "pressure", "squeezing"],
+        "msg": "Based on these symptoms, we should check for **Heart Disease** risk factors."
+    },
+    "diabetes": {
+        "keywords": ["thirsty", "urination", "toilet", "hungry", "weight loss", "blur", "vision", "tired", "wound"],
+        "msg": "Frequent urination, thirst, and hunger are classic signs of **Diabetes**."
+    },
+    "hepatitis": {
+        "keywords": ["yellow", "skin", "eyes", "jaundice", "stomach pain", "vomit", "nausea", "abdomen", "urine dark"],
+        "msg": "Yellowish skin/eyes and abdominal pain often indicate **Hepatitis** or liver issues."
+    },
+    "breast_cancer": {
+        "keywords": ["lump", "breast", "mass", "swelling", "discharge", "nipple", "pain"],
+        "msg": "Please be cautious with any new lumps or changes. We should screen for **Breast Cancer** markers."
+    },
+    "parkinsons": {
+        "keywords": ["shake", "tremor", "hands", "stiff", "slow", "movement", "balance", "speech"],
+        "msg": "Tremors and stiffness can be associated with **Parkinson's Disease**."
+    }
+}
+
+def analyze_symptoms(text):
+    text = text.lower()
+    scores = {}
+    
+    for disease, data in SYMPTOM_DB.items():
+        score = 0
+        for kw in data['keywords']:
+            if kw in text:
+                score += 1
+        if score > 0:
+            scores[disease] = score
+            
+    if not scores:
+        return None, "I couldn't detect specific disease patterns in your symptoms. Could you describe them differently? (e.g., 'I have chest pain', 'I feel very thirsty')"
+    
+    # Return best match
+    best_match = max(scores, key=scores.get)
+    return best_match, SYMPTOM_DB[best_match]['msg']
 
 # -----------------------------------------------------------------------------
 # CONSTANTS & CONFIGURATION
 # -----------------------------------------------------------------------------
 
-# Dictionary mapping technical feature names to human-readable labels and descriptions
 FEATURE_CONFIG = {
     # --- HEART ---
-    "age": {"label": "Age", "help": "Age of the patient in years."},
-    "sex": {"label": "Sex", "help": "1 = Male, 0 = Female"},
-    "cp": {"label": "Chest Pain Type", "help": "0: Typical Angina, 1: Atypical Angina, 2: Non-anginal Pain, 3: Asymptomatic"},
-    "trestbps": {"label": "Resting Blood Pressure", "help": "Resting blood pressure (in mm Hg on admission to the hospital). Normal is < 120/80."},
-    "chol": {"label": "Serum Cholesterol", "help": "Serum cholesterol in mg/dl."},
-    "fbs": {"label": "Fasting Blood Sugar", "help": "1 = > 120 mg/dl, 0 = False. Indicates diabetes risk."},
-    "restecg": {"label": "Resting ECG Results", "help": "0: Normal, 1: ST-T Wave Abnormality, 2: Left Ventricular Hypertrophy"},
-    "thalach": {"label": "Max Heart Rate", "help": "Maximum heart rate achieved during test."},
-    "exang": {"label": "Exercise Induced Angina", "help": "1 = Yes, 0 = No"},
-    "oldpeak": {"label": "ST Depression", "help": "ST depression induced by exercise relative to rest."},
-    "slope": {"label": "Slope of ST Segment", "help": "0: Upsloping, 1: Flat, 2: Downsloping"},
-    "ca": {"label": "Number of Major Vessels", "help": "Number of major vessels (0-3) colored by flourosopy."},
-    "thal": {"label": "Thal", "help": "0: Normal, 1: Fixed Defect, 2: Reversable Defect"},
+    "age": {"label": "Age", "type": "basic", "help": "Age of the patient in years."},
+    "sex": {"label": "Sex", "type": "basic", "help": "1 = Male, 0 = Female"},
+    "cp": {"label": "Chest Pain Type", "type": "basic", "help": "0: Typical Angina, 1: Atypical Angina, 2: Non-anginal Pain, 3: Asymptomatic"},
+    "trestbps": {"label": "Resting Blood Pressure", "type": "basic", "help": "Resting blood pressure (mm Hg). Normal is < 120/80."},
+    "chol": {"label": "Serum Cholesterol", "type": "basic", "help": "Serum cholesterol in mg/dl."},
+    "fbs": {"label": "Fasting Blood Sugar > 120", "type": "basic", "help": "1 = True (>120 mg/dl), 0 = False"},
+    
+    # Heart - Advanced
+    "restecg": {"label": "Resting ECG", "type": "advanced", "help": "ECG results."},
+    "thalach": {"label": "Max Heart Rate", "type": "advanced", "help": "Maximum heart rate achieved."},
+    "exang": {"label": "Exercise Induced Angina", "type": "advanced", "help": "1 = Yes, 0 = No"},
+    "oldpeak": {"label": "ST Depression", "type": "advanced", "help": "ST depression induced by exercise."},
+    "slope": {"label": "Slope of ST", "type": "advanced", "help": "Peak exercise ST segment slope."},
+    "ca": {"label": "Major Vessels (0-3)", "type": "advanced", "help": "Number of major vessels colored by flourosopy."},
+    "thal": {"label": "Thal Error", "type": "advanced", "help": "Thalassemia status."},
 
     # --- DIABETES ---
-    "Pregnancies": {"label": "Pregnancy Ratio", "help": "Number of times pregnant."},
-    "Glucose": {"label": "Glucose Level", "help": "Plasma glucose concentration a 2 hours in an oral glucose tolerance test."},
-    "BloodPressure": {"label": "Blood Pressure", "help": "Diastolic blood pressure (mm Hg)."},
-    "SkinThickness": {"label": "Skin Thickness", "help": "Triceps skin fold thickness (mm)."},
-    "Insulin": {"label": "Insulin Level", "help": "2-Hour serum insulin (mu U/ml)."},
-    "BMI": {"label": "BMI", "help": "Body mass index (weight in kg / (height in m)^2)."},
-    "DiabetesPedigreeFunction": {"label": "Diabetes Pedigree", "help": "Diabetes pedigree function (genetic score)."},
-    "Age": {"label": "Age", "help": "Age of the patient."},
-
-    # --- BREAST CANCER (Sample of main features) ---
-    "radius_mean": {"label": "Mean Radius", "help": "Mean of distances from center to points on the perimeter."},
-    "texture_mean": {"label": "Mean Texture", "help": "Standard deviation of gray-scale values."},
-    "perimeter_mean": {"label": "Mean Perimeter", "help": "Mean size of the core tumor."},
-    "area_mean": {"label": "Mean Area", "help": "Mean area of the core tumor."},
-    "smoothness_mean": {"label": "Mean Smoothness", "help": "Mean of local variation in radius lengths."},
+    "Pregnancies": {"label": "Pregnancies", "type": "basic", "help": "Number of times pregnant."},
+    "Glucose": {"label": "Glucose Level", "type": "basic", "help": "Plasma glucose concentration."},
+    "BloodPressure": {"label": "Blood Pressure", "type": "basic", "help": "Diastolic blood pressure (mm Hg)."},
+    "BMI": {"label": "BMI", "type": "basic", "help": "Body mass index."},
+    "Age": {"label": "Age", "type": "basic", "help": "Age of the patient."},
+    
+    # Diabetes - Advanced
+    "SkinThickness": {"label": "Skin Thickness", "type": "advanced", "help": "Triceps skin fold thickness (mm)."},
+    "Insulin": {"label": "Insulin Level", "type": "advanced", "help": "2-Hour serum insulin."},
+    "DiabetesPedigreeFunction": {"label": "Pedigree Function", "type": "advanced", "help": "Diabetes pedigree function."},
 
     # --- HEPATITIS ---
-    "Steroid": {"label": "Steroids", "help": "1 = No, 2 = Yes"},
-    "Antivirals": {"label": "Antivirals", "help": "1 = No, 2 = Yes"},
-    "Fatigue": {"label": "Fatigue", "help": "1 = No, 2 = Yes"},
-    "Malaise": {"label": "Malaise", "help": "1 = No, 2 = Yes"},
-    "Anorexia": {"label": "Anorexia", "help": "1 = No, 2 = Yes"},
-    "Liver Big": {"label": "Liver Big", "help": "1 = No, 2 = Yes"},
-    "Bilirubin": {"label": "Bilirubin", "help": "Bilirubin level."},
-    "Albumin": {"label": "Albumin", "help": "Albumin level."},
+    "Age": {"label": "Age", "type": "basic", "help": "Patient Age"},
+    "Sex": {"label": "Sex", "type": "basic", "help": "1 = Male, 2 = Female"},
+    "Fatigue": {"label": "Fatigue", "type": "basic", "help": "Flu-like symptom."},
+    "Malaise": {"label": "Malaise", "type": "basic", "help": "General feeling of discomfort."},
+    "Anorexia": {"label": "Anorexia", "type": "basic", "help": "Loss of appetite."},
     
-    # --- PARKINSONS (Sample) ---
-    "MDVP:Fo(Hz)": {"label": "Fund. Freq. (Fo)", "help": "Average vocal fundamental frequency"},
-    "MDVP:Fhi(Hz)": {"label": "Max Freq. (Fhi)", "help": "Maximum vocal fundamental frequency"},
-    "MDVP:Flo(Hz)": {"label": "Min Freq. (Flo)", "help": "Minimum vocal fundamental frequency"},
-    "MDVP:Jitter(%)": {"label": "Jitter (%)", "help": "Measure of variation in fundamental frequency"},
+    # Hepatitis - Advanced
+    "Steroid": {"label": "Steroids", "type": "advanced"},
+    "Antivirals": {"label": "Antivirals", "type": "advanced"},
+    "Liver Big": {"label": "Liver Big", "type": "advanced"},
+    "Liver Firm": {"label": "Liver Firm", "type": "advanced"},
+    "Spleen Palpable": {"label": "Spleen Palpable", "type": "advanced"},
+    "Spiders": {"label": "Spiders", "type": "advanced"},
+    "Ascites": {"label": "Ascites", "type": "advanced"},
+    "Varices": {"label": "Varices", "type": "advanced"},
+    "Bilirubin": {"label": "Bilirubin", "type": "advanced"},
+    "Alk Phosphate": {"label": "Alk Phosphate", "type": "advanced"},
+    "Sgot": {"label": "SGOT", "type": "advanced"},
+    "Albumin": {"label": "Albumin", "type": "advanced"},
+    "Protime": {"label": "Protime", "type": "advanced"},
+    "Histology": {"label": "Histology", "type": "advanced"},
 }
 
 def get_feature_info(name):
-    """Retrieve label and help text, falling back to capitalized name."""
+    """Retrieve label, type and help text."""
     clean_name = name.strip()
     if clean_name in FEATURE_CONFIG:
         return FEATURE_CONFIG[clean_name]
     
-    # Fallback/Generic Logic
     return {
         "label": clean_name.replace("_", " ").title(), 
+        "type": "basic",
         "help": f"Enter value for {clean_name}."
     }
 
 # -----------------------------------------------------------------------------
-# APP LOGIC
+# APP LOAD
 # -----------------------------------------------------------------------------
 
 @st.cache_resource
@@ -100,138 +151,171 @@ feature_names = pipeline['feature_names']
 feature_stats = pipeline.get('feature_stats', {})
 accuracies = pipeline.get('accuracies', {})
 
-# Sidebar Navigation
+# -----------------------------------------------------------------------------
+# SIDEBAR
+# -----------------------------------------------------------------------------
+
 with st.sidebar:
-    st.title("MedDiagnostic System")
+    st.title("MedDiagnostic AI")
     st.markdown("---")
     
-    st.subheader("Configuration")
-    
-    # Disease Selector
-    display_map = {k: k.replace('_', ' ').title() for k in models.keys()}
-    inv_display_map = {v: k for k, v in display_map.items()}
-    
-    selected_display_name = st.selectbox(
-        "Select Medical Condition", 
-        list(display_map.values())
-    )
-    selected_disease = inv_display_map[selected_display_name]
+    # Navigation
+    app_mode = st.radio("Navigation", ["💬 AI Symptom Chat", "📝 Clinical Assessment"])
     
     st.markdown("---")
     
-    # Model Performance Metric in Sidebar
-    st.subheader("Model Reliability")
-    acc = accuracies.get(selected_disease, 0.0)
-    st.metric(label="Validation Accuracy", value=f"{acc:.1%}")
-    st.caption("Accuracy metric based on clinical test datasets.")
-    
-    st.markdown("---")
-    st.markdown("**Version:** 2.1.0 Pro")
-
-# Main Content Area
-st.title(f"{selected_display_name} Assessment")
-st.info(f"Please input the clinical parameters below. Hover over the '?' icon next to each field for guidance.")
-
-# Main Form
-with st.form("diagnostic_form"):
-    st.subheader("Patient Clinical Data")
-    
-    features = feature_names.get(selected_disease, [])
-    stats = feature_stats.get(selected_disease, {})
-    
-    # Organize inputs into 3 columns
-    cols = st.columns(3)
-    input_values = {}
-    
-    for i, feat in enumerate(features):
-        col_idx = i % 3
-        col = cols[col_idx]
+    if app_mode == "📝 Clinical Assessment":
+        st.subheader("Mode Selection")
+        user_mode = st.radio(
+            "User Type",
+            ["General User", "Medical Professional"],
+            index=0
+        )
+        is_basic_mode = (user_mode == "General User")
         
-        # Get defaults and metadata
-        feat_stat = stats.get(feat, {})
-        min_curr = feat_stat.get('min', 0.0)
-        max_curr = feat_stat.get('max', 10.0)
-        mean_curr = feat_stat.get('mean', 5.0)
-        
-        # Buffer for input range
-        value_range = max_curr - min_curr
-        if value_range == 0: value_range = 10.0
-        
-        min_input = min_curr - (value_range * 0.2)
-        max_input = max_curr + (value_range * 0.2)
-        
-        # Get human readable info
-        info = get_feature_info(feat)
-        
-        with col:
-            val = st.number_input(
-                label=info['label'],
-                min_value=float(min_input),
-                max_value=float(max_input),
-                value=float(mean_curr),
-                format="%.2f",
-                help=info['help']
-            )
-            input_values[feat] = val
-            
-    st.markdown("---")
-    submit_btn = st.form_submit_button("Run Diagnostic Assessment", type="primary", use_container_width=True)
-
-# Analysis Logic & Results
-if submit_btn:
-    try:
-        # Prepare Input
-        input_list = [input_values[f] for f in features]
-        input_vector = pd.DataFrame([input_list], columns=features)
-        
-        # Scaling
-        if selected_disease in scalers:
-            input_scaled = scalers[selected_disease].transform(input_vector)
-        else:
-            input_scaled = input_vector
-            
-        # Prediction
-        model = models[selected_disease]
-        prediction = model.predict(input_scaled)[0]
-        
-        # Probability
-        probability = 0.0
-        if hasattr(model, "predict_proba"):
-            probability = model.predict_proba(input_scaled)[0, 1]
-        
-        # ---------------------------------------------------------------------
-        # RESULTS DISPLAY
-        # ---------------------------------------------------------------------
         st.markdown("---")
-        st.subheader("Diagnostic Results")
         
-        # 1. Summary of Inputs (Engagement Feature)
-        with st.expander("View Patient Input Summary", expanded=False):
-            summary_data = {
-                get_feature_info(k)['label']: f"{v:.2f}" 
-                for k, v in input_values.items()
-            }
-            st.dataframe(pd.DataFrame(list(summary_data.items()), columns=["Parameter", "Value"]), use_container_width=True)
+        display_map = {k: k.replace('_', ' ').title() for k in models.keys()}
+        inv_display_map = {v: k for k, v in display_map.items()}
+        
+        # Initialize session state for selection if not present
+        if 'selected_disease_name' not in st.session_state:
+            st.session_state.selected_disease_name = list(display_map.values())[0]
 
-        # 2. Main Result
-        res_col1, res_col2 = st.columns([2, 1])
+        selected_display_name = st.selectbox(
+            "Select Condition", 
+            list(display_map.values()),
+            index=list(display_map.values()).index(st.session_state.selected_disease_name)
+        )
+        selected_disease = inv_display_map[selected_display_name]
         
-        with res_col1:
-            if prediction == 1:
-                st.error("⚠️ HIGH RISK DETECTED")
-                st.markdown(f"The analysis indicates a high probability of **{selected_display_name}** based on the provided clinical profiles.")
-                st.markdown("**Recommendation:** Immediate clinical consultation is advised.")
+        # Update session state
+        st.session_state.selected_disease_name = selected_display_name
+        
+        acc = accuracies.get(selected_disease, 0.0)
+        st.metric("Model Reliability", f"{acc:.1%}")
+
+# -----------------------------------------------------------------------------
+# MAIN CONTENT
+# -----------------------------------------------------------------------------
+
+if app_mode == "💬 AI Symptom Chat":
+    st.title("🤖 AI Health Assistant")
+    st.markdown("Describe your symptoms below, and I will recommend the appropriate clinical screening.")
+    
+    # Chat History Container
+    if "messages" not in st.session_state:
+        st.session_state.messages = [{"role": "assistant", "content": "Hello! I am your medical assistant. How are you feeling today? Tell me about any symptoms you are experiencing."}]
+
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+
+    # Chat Input
+    if prompt := st.chat_input("Ex: I have chest pain and feel dizzy..."):
+        # User message
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
+            
+        # Analysis
+        disease_match, response_text = analyze_symptoms(prompt)
+        
+        # Simulate thinking
+        with st.spinner("Analyzing symptoms..."):
+            time.sleep(1)
+            
+        # Assistant Response
+        with st.chat_message("assistant"):
+            st.markdown(response_text)
+            st.session_state.messages.append({"role": "assistant", "content": response_text})
+            
+            if disease_match:
+                # Button to redirect
+                display_name = disease_match.replace('_', ' ').title()
+                if st.button(f"Start {display_name} Assessment →"):
+                    st.session_state.selected_disease_name = display_name
+                    # Force a rerun to switch tabs? 
+                    # Streamlit doesn't strictly allow switching tabs programmatically easily without session state tricks
+                    # We will ask user to switch manually or just highlight it
+                    st.info(f"Please switch to the 'Clinical Assessment' tab in the sidebar and select **{display_name}** to begin your diagnosis.")
+
+elif app_mode == "📝 Clinical Assessment":
+    st.title(f"{st.session_state.selected_disease_name} Assessment")
+
+    if is_basic_mode:
+        st.info("ℹ️ **Simplified Mode**: Estimating complex lab values using population averages.")
+    
+    with st.form("diagnostic_form"):
+        st.subheader("Patient Vitals & History")
+        
+        features = feature_names.get(selected_disease, [])
+        stats = feature_stats.get(selected_disease, {})
+        
+        visible, hidden = [], []
+        for feat in features:
+            info = get_feature_info(feat)
+            if is_basic_mode and info.get('type') == 'advanced':
+                hidden.append(feat)
             else:
-                st.success("✅ LOW RISK / NEGATIVE")
-                st.markdown(f"The analysis indicates a low probability of **{selected_display_name}**.")
-                st.markdown("**Recommendation:** Routine monitoring as per standard protocols.")
+                visible.append(feat)
                 
-        with res_col2:
-            st.metric("Risk Probability", f"{probability:.1%}")
+        # Visible Inputs
+        cols = st.columns(3)
+        input_values = {}
+        
+        for i, feat in enumerate(visible):
+            with cols[i % 3]:
+                info = get_feature_info(feat)
+                feat_stat = stats.get(feat, {})
+                min_v, max_v, mean_v = feat_stat.get('min', 0.0), feat_stat.get('max', 10.0), feat_stat.get('mean', 5.0)
+                rng = max_v - min_v if (max_v - min_v) > 0 else 10.0
+                
+                val = st.number_input(
+                    label=info['label'],
+                    min_value=float(min_v - rng*0.2),
+                    max_value=float(max_v + rng*0.2),
+                    value=float(mean_v),
+                    format="%.2f",
+                    help=info['help'],
+                    key=feat
+                )
+                input_values[feat] = val
+                
+        # Hidden inputs
+        for feat in hidden:
+            input_values[feat] = stats.get(feat, {}).get('mean', 0.0)
+
+        st.markdown("---")
+        submit = st.form_submit_button("Run Analysis", type="primary", use_container_width=True)
+
+    if submit:
+        try:
+            # Build vector
+            input_list = [input_values[f] for f in features]
+            input_vector = pd.DataFrame([input_list], columns=features)
             
-            # Custom progress bar color based on risk
-            bar_color = ":red[" if probability > 0.5 else ":green["
-            st.progress(probability)
+            # Predict
+            model = models[selected_disease]
+            if selected_disease in scalers:
+                input_vector = scalers[selected_disease].transform(input_vector)
+                
+            pred = model.predict(input_vector)[0]
+            prob = model.predict_proba(input_vector)[0, 1] if hasattr(model, "predict_proba") else 0.0
             
-    except Exception as e:
-        st.error(f"An error occurred during analysis: {str(e)}")
+            # Results
+            st.markdown("### Results")
+            res1, res2 = st.columns([2, 1])
+            with res1:
+                if pred == 1:
+                    st.error("⚠️ HIGH RISK")
+                    st.markdown("**Action Required:** Please consult a specialist immediately.")
+                else:
+                    st.success("✅ LOW RISK")
+                    st.markdown("No significant risk factors detected.")
+            with res2:
+                st.metric("Probability", f"{prob:.1%}")
+                st.progress(prob)
+                
+        except Exception as e:
+            st.error(f"Error: {str(e)}")
